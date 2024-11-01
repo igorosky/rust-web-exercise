@@ -1,16 +1,17 @@
 
 use std::sync::Arc;
 
-use axum::{extract::{Multipart, State}, http::StatusCode, routing::post, Router};
-use super::{models::create_blog_post::CreateBlogPost, AppState, RouterType};
+use axum::{extract::{Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
+use super::{models::{create_blog_post::CreateBlogPost, get_posts_response::GetPostsResponse}, AppState, RouterType};
 
 #[inline]
 pub(super) fn initialize() -> RouterType {
     Router::new()
         .route("/add", post(add_post))
+        .route("/get", get(get_posts))
 }
 
-async fn add_post(State(app_state): State<Arc<AppState>>, mut req: Multipart) -> Result<StatusCode, StatusCode> {
+async fn add_post(State(app_state): State<Arc<AppState>>, mut req: Multipart) -> Result<impl IntoResponse, StatusCode> {
     let mut user_name = None;
     let mut content = None;
     let mut user_avatar_url = None;
@@ -42,7 +43,23 @@ async fn add_post(State(app_state): State<Arc<AppState>>, mut req: Multipart) ->
                 tracing::error!("Error adding post: {:?}", err);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
-        return Ok(StatusCode::CREATED);
+        
+        return Ok(Redirect::to("/home").into_response());
     }
     Err(StatusCode::BAD_REQUEST)
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct GetPostsQuery {
+    offset: Option<i64>,
+    limit: Option<i64>,
+}
+
+async fn get_posts(State(app_state): State<Arc<AppState>>, Query(pagination): Query<GetPostsQuery>) -> Result<Json<GetPostsResponse>, StatusCode> {
+    let posts = app_state.blog_post_service.get_posts(pagination.limit, pagination.offset).await
+        .map_err(|err| {
+            tracing::error!("Error getting posts: {:?}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    Ok(Json(posts))
 }

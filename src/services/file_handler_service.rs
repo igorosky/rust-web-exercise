@@ -3,7 +3,7 @@ use axum::body::Bytes;
 use futures::{pin_mut, Stream, TryStreamExt};
 use sha2::Digest;
 use tokio::{fs::File, io::{AsyncReadExt, AsyncWriteExt}};
-use tokio_util::io::StreamReader;
+use tokio_util::io::{ReaderStream, StreamReader};
 
 use crate::db::{image::{get_image_by_hash, insert_image}, DatabasePool};
 
@@ -112,11 +112,12 @@ impl FileHandlerService {
         Ok(file_handle)
     }
     
-    pub(crate) async fn get_file(&self, filename: &str) -> Result<Bytes, tokio::io::Error> {
+    pub(crate) async fn get_file(&self, filename: &str) -> Result<ReaderStream<File>, tokio::io::Error> {
         let mut file_path = self.folder_path.clone();
         file_path.push(filename);
-        let mut buffer = Vec::new();
-        File::open(file_path).await?.read_to_end(&mut buffer).await?;
-        Ok(buffer.into())
+        if !file_path.is_file() {
+            return Err(tokio::io::Error::new(tokio::io::ErrorKind::NotFound, "File not found"));
+        }
+        Ok(ReaderStream::new(File::open(file_path).await?))
     }
 }

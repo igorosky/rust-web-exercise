@@ -2,7 +2,7 @@ use std::sync::Weak;
 
 use tokio::sync::Mutex;
 
-use crate::{app_state::AppState, db::{blog_posts::{insert_post, BlogPost}, DatabasePool}, endpoints::models::create_blog_post::CreateBlogPost};
+use crate::{app_state::AppState, db::{blog_posts::{insert_post, RawPostDBEntry}, DatabasePool}, endpoints::models::{create_blog_post::CreateBlogPost, get_posts_response::GetPostsResponse}};
 
 pub(crate) struct BlogPostService {
     connection_pool: DatabasePool,
@@ -18,7 +18,7 @@ impl BlogPostService {
         }
     }
 
-    pub(crate) async fn add_post(&self, mut blog_post: CreateBlogPost) -> Result<BlogPost, Box<dyn std::error::Error>> {
+    pub(crate) async fn add_post(&self, mut blog_post: CreateBlogPost) -> Result<RawPostDBEntry, Box<dyn std::error::Error>> {
         let mut user_avatar = None;
         blog_post.user_avatar_url = blog_post.user_avatar_url.take()
             .map(|v| v.trim().to_string())
@@ -28,11 +28,11 @@ impl BlogPostService {
             if !response.status().is_success() {
                 return Err(String::from("Failed to fetch user avatar").into());
             }
-            let uuid = uuid::Uuid::new_v4().to_string();
-            user_avatar = Some(self.app_state.lock().await.upgrade().unwrap()
+            let user_avatar_tmp = self.app_state.lock().await.upgrade().unwrap()
                 .file_handler_service
-                .save_file(response.bytes_stream()).await?);
-            *user_avatar_url = uuid;
+                .save_file(response.bytes_stream()).await?;
+            *user_avatar_url = user_avatar_tmp.get_name().unwrap().to_str().unwrap().to_string();
+            user_avatar = Some(user_avatar_tmp);
         }
         if let Some(image) = blog_post.post_image.as_mut() {
             image.save().await?;
@@ -52,5 +52,24 @@ impl BlogPostService {
     #[inline]
     pub(crate) async fn set_app_state(&self, app_state: Weak<AppState>) {
         *self.app_state.lock().await = app_state;
+    }
+    
+    pub(crate) async fn get_posts(&self, limit: Option<i64>, offset: Option<i64>) -> Result<GetPostsResponse, sqlx::Error> {
+    let limit = limit.map(|v| v.clamp(1, 100)).unwrap_or(10);
+        let offset = offset.map(|v| v.max(0)).unwrap_or(0);
+        use crate::db::blog_posts;
+        Ok(
+            GetPostsResponse {
+                limit,
+                offset,
+                total: blog_posts::get_total_amount_of_posts(&self.connection_pool).await?,
+                posts: blog_posts::get_newest_posts(
+                    &self.connection_pool,
+                    limit,
+                    offset,
+                ).await?,
+            }
+        )
+        
     }
 }

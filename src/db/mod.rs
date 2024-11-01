@@ -1,6 +1,4 @@
-#[allow(dead_code)]
 pub(crate) mod blog_posts;
-#[allow(dead_code)]
 pub(crate) mod image;
 
 pub(crate) type Database = sqlx::Sqlite;

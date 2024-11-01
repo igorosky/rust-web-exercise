@@ -57,7 +57,7 @@ async fn main() {
 
     tracing::info!("Starting the server");
     if let Err(err) = start_server(
-        AppState::new_with_defaults(
+        AppState::initialize(
             connection_pool.clone(),
             match std::env::var("UPLOAD_DIRECTORY") {
                 Ok(dir) => dir,

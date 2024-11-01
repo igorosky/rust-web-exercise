@@ -1,0 +1,50 @@
+body {
+    background-color: darkolivegreen;
+}
+
+main>form {
+    display: flex;
+    flex-direction: column;
+    background-color: blanchedalmond;
+    padding: 7px;
+    border-radius: 15px;
+    border: solid 2px black;
+}
+
+main>article {
+    background-color: aqua;
+    margin-top: 10px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    border: solid 2px black;
+}
+
+main>article>div {
+    padding: 5px;
+}
+
+main>article>div>header {
+    display: flex;
+    align-items: center;
+}
+
+main>article>div>header>img {
+    margin-right: 5px;
+    font-size: 0.8rem;
+    color: darkslategrey;
+    height: 3rem;
+    width: auto;
+    border: solid 1px black;
+    border-radius: 15px;
+}
+
+main>article>div>header>div>i {
+    font-size: 0.8rem;
+    color: darkslategrey;
+}
+
+main>article>img {
+    border-top: solid 2px black;
+    border-radius: 15px;
+}

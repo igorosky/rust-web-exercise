@@ -37,13 +37,3 @@ pub(crate) async fn get_image_by_hash(pool: &DatabasePool, image_hash: &[u8]) ->
         .fetch_optional(pool)
         .await
 }
-
-#[inline]
-pub(crate) async fn get_image_by_id(pool: &DatabasePool, id: i64) -> Result<Option<Image>, sqlx::Error> {
-    sqlx::query_as::<_, Image>(
-        "SELECT id, image_filename FROM Images WHERE id = ?"
-    )
-        .bind(id)
-        .fetch_optional(pool)
-        .await
-}

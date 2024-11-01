@@ -1,6 +1,8 @@
-use axum::{response::{Html, IntoResponse}, routing::get, Router};
+use std::sync::Arc;
 
-use super::RouterType;
+use axum::{body::Body, extract::State, response::IntoResponse, routing::get, Router};
+use reqwest::StatusCode;
+use super::{AppState, RouterType};
 
 #[inline]
 pub(super) fn initialize() -> RouterType {
@@ -8,23 +10,12 @@ pub(super) fn initialize() -> RouterType {
         .route("/home", get(home))
 }
 
-async fn home() -> impl IntoResponse {
-    Html(r#"
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Posts</title>
-</head>
-    <form method="post" action="post/add" enctype="multipart/form-data">
-        <input type="text" name="user_name">
-        <input type="text" name="content">
-        <input type="text" name="user_avatar_url">
-        <input type="file" name="post_image" multiple>
-        <input type="submit">
-    </form>
-    <img src="http://localhost:3000/image/ed63123d-e947-422a-9b36-c97c7406f860" />
-<body>
-    "#)
+async fn home(State(app_state): State<Arc<AppState>>) -> Result<impl IntoResponse, StatusCode> {
+    Ok(Body::from_stream(
+        app_state.static_files_service.get_static_file("index.html").await
+            .map_err(|err| match err.kind() {
+                tokio::io::ErrorKind::NotFound => axum::http::StatusCode::NOT_FOUND,
+                _ => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            })?
+    ))
 }

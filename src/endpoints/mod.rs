@@ -2,6 +2,7 @@ pub(crate) mod models;
 mod blog_posts;
 mod images;
 mod home;
+mod static_files;
 
 use std::sync::Arc;
 
@@ -15,6 +16,7 @@ pub(super) async fn start_server(app_state: Arc<AppState>) -> Result<(), Box<dyn
     let router = Router::new()
         .nest("/post", blog_posts::initialize())
         .nest("/image", images::initialize())
+        .nest("/file", static_files::initialize())
         .nest("/", home::initialize())
         .with_state(app_state);
 
