@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Posts</title>
+
+    <style>
+        body {
+            background-color: darkolivegreen;
+        }
+
+        main {
+            /* width: 80%; */
+        }
+
+        main>form {
+            display: flex;
+            flex-direction: column;
+            background-color: blanchedalmond;
+            padding: 7px;
+            border-radius: 15px;
+            border: solid 2px black;
+        }
+
+        main>article {
+            background-color: aqua;
+            margin-top: 10px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            border: solid 2px black;
+        }
+
+        main>article>div {
+            padding: 5px;
+        }
+
+        main>article>div>header {
+            display: flex;
+            align-items: center;
+        }
+        
+        main>article>div>header>img {
+            margin-right: 5px;
+            font-size: 0.8rem;
+            color: darkslategrey;
+            height: 3rem;
+            width: auto;
+            border: solid 1px black;
+            border-radius: 15px;
+        }
+
+        main>article>div>header>div>i {
+            font-size: 0.8rem;
+            color: darkslategrey;
+        }
+
+        main>article>img {
+            border-top: solid 2px black;
+            border-radius: 15px;
+        }
+    </style>
+    
+</head>
+<body>
+    <main>
+        <form method="post" action="add" enctype="multipart/form-data">
+            <label for="user_name">Username:</label>
+            <input type="text" name="user_name" id="user_name">
+            <label for="content">Content:</label>
+            <input type="text" name="content" id="content">
+            <label for="user_avatar_url">Content:</label>
+            <textarea name="user_avatar_url" id="user_avatar_url"></textarea>
+            <label for="post_image">Image:</label>
+            <input type="file" name="post_image" id="post_image">
+            <input type="submit" value="Post">
+        </form>
+        <article>
+            <div>
+                <header>
+                    <img src="mock.png" alt="Posted image">
+                    <div>
+                        <b>John</b> <i>date: 12-12-2012</i>
+                    </div>
+                </header>
+                <p>
+                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolorum tempore magnam expedita consectetur eum, quae velit aspernatur sunt dignissimos vero error necessitatibus hic placeat iusto aut fugiat, autem nemo dolorem?
+                </p>
+            </div>
+            <img src="mock.png" alt="Posted image">
+        </article>
+    </main>
+</body>
+</html>
