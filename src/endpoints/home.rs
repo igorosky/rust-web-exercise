@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use axum::{body::Body, extract::State, response::IntoResponse, routing::get, Router};
+use axum::{extract::{Path, State}, response::IntoResponse, routing::get, Router};
 use reqwest::StatusCode;
-use super::{AppState, RouterType};
+use super::{static_files, AppState, RouterType};
 
 #[inline]
 pub(super) fn initialize() -> RouterType {
@@ -10,12 +10,6 @@ pub(super) fn initialize() -> RouterType {
         .route("/home", get(home))
 }
 
-async fn home(State(app_state): State<Arc<AppState>>) -> Result<impl IntoResponse, StatusCode> {
-    Ok(Body::from_stream(
-        app_state.static_files_service.get_static_file("index.html").await
-            .map_err(|err| match err.kind() {
-                tokio::io::ErrorKind::NotFound => axum::http::StatusCode::NOT_FOUND,
-                _ => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            })?
-    ))
+async fn home(state: State<Arc<AppState>>) -> Result<impl IntoResponse, StatusCode> {
+    static_files::get_static_file(state, Path("index.html".to_string())).await
 }

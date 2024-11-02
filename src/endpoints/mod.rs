@@ -35,7 +35,7 @@ async fn shutdown_signal() {
     let mut last_clicked = tokio::time::Instant::now();
     tokio::signal::ctrl_c().await.expect("Failed to listen for the signal");
     let mut second_click = tokio::time::Instant::now();
-    while second_click.checked_duration_since(last_clicked).expect("Time went backwards") > std::time::Duration::from_secs(5) {
+    while second_click.checked_duration_since(last_clicked).expect("Time went backwards") > tokio::time::Duration::from_secs(5) {
         tracing::warn!("{}", SHUTDOWN_CONFIRMATION_MESSAGE);
         last_clicked = second_click;
         tokio::signal::ctrl_c().await.expect("Failed to listen for the signal");

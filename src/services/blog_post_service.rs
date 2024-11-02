@@ -1,8 +1,7 @@
 use std::sync::Weak;
-
 use tokio::sync::Mutex;
-
-use crate::{app_state::AppState, db::{blog_posts::{insert_post, RawPostDBEntry}, DatabasePool}, endpoints::models::{create_blog_post::CreateBlogPost, get_posts_response::GetPostsResponse}};
+use crate::{app_state::AppState, db::{blog_posts::insert_post, DatabasePool}, endpoints::models::get_posts_response::GetPostsResponse};
+use super::file_handler_service::FileHandle;
 
 pub(crate) struct BlogPostService {
     connection_pool: DatabasePool,
@@ -18,12 +17,18 @@ impl BlogPostService {
         }
     }
 
-    pub(crate) async fn add_post(&self, mut blog_post: CreateBlogPost) -> Result<RawPostDBEntry, Box<dyn std::error::Error>> {
+    pub(crate) async fn add_post(
+        &self, 
+        user_name: String,
+        content: String,
+        mut user_avatar_url: Option<String>,
+        mut post_image: Option<FileHandle>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut user_avatar = None;
-        blog_post.user_avatar_url = blog_post.user_avatar_url.take()
+        user_avatar_url = user_avatar_url.take()
             .map(|v| v.trim().to_string())
             .and_then(|v| if v.is_empty() { None } else { Some(v) });
-        if let Some(user_avatar_url) = blog_post.user_avatar_url.as_mut() {
+        if let Some(user_avatar_url) = user_avatar_url.as_mut() {
             let response = reqwest::get(user_avatar_url.as_str()).await.unwrap();
             if !response.status().is_success() {
                 return Err(String::from("Failed to fetch user avatar").into());
@@ -34,19 +39,20 @@ impl BlogPostService {
             *user_avatar_url = user_avatar_tmp.get_name().unwrap().to_str().unwrap().to_string();
             user_avatar = Some(user_avatar_tmp);
         }
-        if let Some(image) = blog_post.post_image.as_mut() {
+        if let Some(image) = post_image.as_mut() {
             image.save().await?;
         }
         if let Some(image) = user_avatar.as_mut() {
             image.save().await?;
         }
-        Ok(insert_post(
+        insert_post(
             &self.connection_pool,
-            &blog_post.user_name,
-            &blog_post.content,
+            &user_name,
+            &content,
             user_avatar.and_then(|v| v.get_id()),
-            blog_post.post_image.and_then(|v| v.get_id()),
-        ).await?)
+            post_image.and_then(|v| v.get_id()),
+        ).await?;
+        Ok(())
     }
 
     #[inline]

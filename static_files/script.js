@@ -6,6 +6,7 @@ fetch('/post/get')
         for (const post of data.posts) {
             const article = document.createElement('article');
             const user_avatar = post.user_avatar !== null ? `<img src="image/${post.user_avatar}" alt="User avatar image">` : '';
+            const post_image = post.post_image !== null ? `<img src="image/${post.post_image}" alt="Posted image">` : '';
             article.innerHTML = `
                 <div>
                     <header>
@@ -18,7 +19,7 @@ fetch('/post/get')
                         ${post.content}
                     </p>
                 </div>
-                <img src="image/${post.post_image}" alt="Posted image">
+                ${post_image}
             `;
             main.appendChild(article);
         }

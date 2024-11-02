@@ -1,17 +1,4 @@
-use time::PrimitiveDateTime;
-
 use super::DatabasePool;
-
-#[derive(Debug, Clone, sqlx::FromRow)]
-#[allow(dead_code)]
-pub(crate) struct RawPostDBEntry {
-    pub id: i64,
-    pub user_name: String,
-    pub content: String,
-    pub user_avatar: Option<i64>,
-    pub post_image: Option<i64>,
-    pub publication_date: PrimitiveDateTime,
-}
 
 #[inline]
 pub(crate) async fn insert_post(
@@ -20,16 +7,17 @@ pub(crate) async fn insert_post(
     content: &str,
     user_avatar: Option<i64>,
     post_image: Option<i64>
-) -> Result<RawPostDBEntry, sqlx::Error> {
-    sqlx::query_as::<_, RawPostDBEntry>(
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
         "INSERT INTO BlogPosts (user_name, content, user_avatar, post_image) VALUES (?, ?, ?, ?) RETURNING *",
     )
         .bind(user_name)
         .bind(content)
         .bind(user_avatar)
         .bind(post_image)
-        .fetch_one(pool)
-        .await
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 #[derive(Debug, Clone, sqlx::FromRow, serde::Serialize)]
@@ -39,7 +27,7 @@ pub(crate) struct Post {
     pub content: String,
     pub user_avatar: Option<String>,
     pub post_image: Option<String>,
-    pub publication_date: PrimitiveDateTime,
+    pub publication_date: String,
 }
 
 #[inline]

@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use axum::{extract::{Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
-use super::{models::{create_blog_post::CreateBlogPost, get_posts_response::GetPostsResponse}, AppState, RouterType};
+use super::{models::get_posts_response::GetPostsResponse, AppState, RouterType};
 
 #[inline]
 pub(super) fn initialize() -> RouterType {
@@ -25,6 +25,9 @@ async fn add_post(State(app_state): State<Arc<AppState>>, mut req: Multipart) ->
             Some("user_avatar_url") => user_avatar_url = Some(field.text().await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?),
             Some("post_image") => {
+                if let Some("") = field.file_name() {
+                    continue;
+                }
                 post_image = match app_state.file_handler_service
                     .save_file(field).await {
                     Ok(v) => Some(v),
@@ -38,7 +41,7 @@ async fn add_post(State(app_state): State<Arc<AppState>>, mut req: Multipart) ->
         }
     }
     if let (Some(user_name), Some(content)) = (user_name, content) {
-        app_state.blog_post_service.add_post(CreateBlogPost{user_name, content, user_avatar_url, post_image}).await
+        app_state.blog_post_service.add_post(user_name, content, user_avatar_url, post_image).await
             .map_err(|err| {
                 tracing::error!("Error adding post: {:?}", err);
                 StatusCode::INTERNAL_SERVER_ERROR
