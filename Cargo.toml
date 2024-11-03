@@ -2,9 +2,10 @@
 name = "jet-brains-internships-rust-web"
 version = "0.1.0"
 edition = "2021"
+authors = ["Igor Zaworski"]
 
 [dependencies]
-tokio = { version = "~1.41.0", features = ["rt-multi-thread", "signal", "full"] }
+tokio = { version = "~1.41.0", features = ["rt-multi-thread", "signal", "fs"] }
 tokio-util = { version = "~0.7.12", features = ["io"] }
 futures = "~0.3"
 axum = { version = "~0.7.5", features = ["multipart"] }
@@ -17,3 +18,5 @@ async-trait = "~0.1.80"
 reqwest = { version = "~0.12.9", features = ["stream"] }
 uuid = { version = "~1.11.0", features = ["v4", "fast-rng"] }
 sha2 = "~0.10.8"
+thiserror = "~1.0.67"
+urlencoding = "~2.1.3"

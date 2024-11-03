@@ -48,3 +48,11 @@ article>img {
     border-top: solid 2px black;
     border-radius: 15px;
 }
+
+form>div {
+    background-color: red;
+    border: solid 2px black;
+    border-radius: 15px;
+    padding: 1rem;
+    margin: 1rem;
+}

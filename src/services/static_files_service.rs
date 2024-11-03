@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 
-use super::file_handler_service::get_file_from_directory;
+use super::file_handler_service::{get_file_from_directory, GetFileFromDirectoryError};
 
 
 pub(crate) struct StaticFilesService {
@@ -20,7 +20,7 @@ impl StaticFilesService {
     }
 
     #[inline]
-    pub(crate) async fn get_static_file(&self, file_name: &str) -> Result<ReaderStream<File>, tokio::io::Error> {
+    pub(crate) async fn get_static_file(&self, file_name: &str) -> Result<ReaderStream<File>, GetFileFromDirectoryError> {
         get_file_from_directory(self.static_files_directory.clone(), file_name).await
     }
 }

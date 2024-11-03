@@ -3,24 +3,22 @@ mod blog_posts;
 mod images;
 mod home;
 mod static_files;
-
-use std::sync::Arc;
-
 use axum::Router;
+use crate::{app_state::AppStateType, env_variables};
 
-use crate::app_state::AppState;
+pub(super) type RouterType = Router<AppStateType>;
 
-pub(super) type RouterType = Router<Arc<AppState>>;
-
-pub(super) async fn start_server(app_state: Arc<AppState>) -> Result<(), Box<dyn std::error::Error>> {
+pub(super) async fn start_server(app_state: AppStateType) -> Result<(), Box<dyn std::error::Error>> {
     let router = Router::new()
-        .nest("/post", blog_posts::initialize())
+        .nest("/post", blog_posts::initialize(
+            env_variables::get_env_var(env_variables::MAX_BODY_SIZE)?.parse()?))
         .nest("/image", images::initialize())
         .nest("/file", static_files::initialize())
         .nest("/", home::initialize())
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let listener = tokio::net::TcpListener::bind(
+        env_variables::get_env_var(env_variables::ADDRESS)?).await?;
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;

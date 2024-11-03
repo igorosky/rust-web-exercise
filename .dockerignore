@@ -4,3 +4,6 @@
 uploads
 .env
 *.sqlite3
+.gitignore
+Dockerfile
+README.md

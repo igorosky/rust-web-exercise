@@ -1,8 +1,17 @@
 use std::sync::Arc;
+use crate::{db::DatabasePool, env_variables, services::{blog_post_service::BlogPostService, file_handler_service::FileHandlerService, static_files_service::StaticFilesService}};
 
-use crate::{db::DatabasePool, services::{blog_post_service::BlogPostService, file_handler_service::FileHandlerService, static_files_service}};
+pub(crate) type AppStateType = Arc<AppState>;
 
-use self::static_files_service::StaticFilesService;
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum AppStateInitializationError {
+    #[error("{0}")]
+    GettingEnvVarError(#[from] env_variables::GettingEnvVarError),
+    #[error("Invalid path")]
+    InvalidPathError,
+    #[error("Invalid number")]
+    NotValidNumber,
+}
 
 pub(crate) struct AppState {
     pub blog_post_service: BlogPostService,
@@ -25,18 +34,19 @@ impl AppState {
     }
 
     #[inline]
-    pub(crate) async fn initialize(connection_pool: DatabasePool) -> Result<Arc<Self>, std::env::VarError> {
-        use std::env::var;
+    pub(crate) async fn initialize(connection_pool: DatabasePool) -> Result<Arc<Self>, AppStateInitializationError> {
+        use env_variables::get_env_var as var;
         let ans = Arc::new(Self::new(
             BlogPostService::new(connection_pool.clone()),
             FileHandlerService::new(
                 connection_pool,
-                var("UPLOAD_DIRECTORY")?.as_str(),
-                var("UPLOAD_BUFFER_SIZE")?.parse().unwrap(),
-            ).unwrap(),
+                var(env_variables::UPLOAD_DIRECTORY)?.as_str(),
+                var(env_variables::UPLOAD_BUFFER_SIZE)?
+                    .parse().map_err(|_| AppStateInitializationError::NotValidNumber)?,
+            ).ok_or(AppStateInitializationError::InvalidPathError)?,
             StaticFilesService::new(
-                var("STATIC_FILES_DIRECTORY")?.as_str()
-            ).unwrap(),
+                var(env_variables::STATIC_FILES_DIRECTORY)?.as_str()
+            ).ok_or(AppStateInitializationError::InvalidPathError)?,
         ));
         let ptr = Arc::downgrade(&ans);
         ans.blog_post_service.set_app_state(ptr).await;

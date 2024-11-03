@@ -1,5 +1,11 @@
 const GET_POSTS_ENDPOINT = '/post/get_all';
 
+const urlParams = new URLSearchParams(window.location.search);
+const error = urlParams.get('error');
+if (error !== null) {
+    document.getElementById('error-field').removeAttribute('hidden');
+    document.getElementById('error-field-message').innerText = error;
+}
 
 const main = document.querySelector('section');
 function display_posts(posts) {

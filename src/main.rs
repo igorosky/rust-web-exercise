@@ -2,19 +2,12 @@ mod endpoints;
 mod app_state;
 mod db;
 mod services;
+mod env_variables;
 
 use endpoints::start_server;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
 use app_state::AppState;
-
 use crate::db::initialize_db;
-
-#[inline]
-#[cfg(debug_assertions)]
-fn debug_mode_initialization() {
-    dotenvy::dotenv().ok();
-}
 
 #[inline]
 fn tracing_subscriber_init() {
@@ -32,16 +25,16 @@ fn tracing_subscriber_init() {
 #[tokio::main]
 async fn main() {
     #[cfg(debug_assertions)]
-    debug_mode_initialization();
+    env_variables::debug_mode_initialization();
     tracing_subscriber_init();
     tracing::info!("Starting the application");
 
     // Database initialization
     tracing::info!("Initializing a connection pool to the database");
-    let database_url = match std::env::var("DATABASE_URL") {
+    let database_url = match env_variables::get_env_var(env_variables::DATABASE_URL) {
         Ok(database_url) => database_url,
-        Err(_) => {
-            tracing::error!("DATABASE_URL environment variable is not set");
+        Err(err) => {
+            tracing::error!("{}", err);
             return;
         }
     };
@@ -60,14 +53,10 @@ async fn main() {
         connection_pool.clone(),
     ).await {
         Ok(app_state) => app_state,
-        Err(std::env::VarError::NotPresent) => {
-            tracing::error!("Error while initializing the application state: environment variable is not set");
+        Err(err) => {
+            tracing::error!("{}", err);
             return;
-        }
-        Err(std::env::VarError::NotUnicode(_)) => {
-            tracing::error!("Error while initializing the application state: environment variable is not a valid Unicode string");
-            return;
-        }
+        },
     };
     if let Err(err) = start_server(app_state).await {
         tracing::error!("Error while running server: {}", err);

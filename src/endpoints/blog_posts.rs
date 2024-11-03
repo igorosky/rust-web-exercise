@@ -1,16 +1,13 @@
 
-use std::sync::Arc;
-
-use axum::{extract::{multipart::Field, DefaultBodyLimit, Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
-use super::{models::get_posts_response::GetPostsResponse, AppState, RouterType};
-
-const MAX_BODY_SIZE: usize = 20 * 1024 * 1024;
+use axum::{extract::{multipart::Field, DefaultBodyLimit, Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect, Response}, routing::{get, post}, Json, Router};
+use crate::app_state::AppStateType;
+use super::{models::get_posts_response::GetPostsResponse, RouterType};
 
 #[inline]
-pub(super) fn initialize() -> RouterType {
+pub(super) fn initialize(max_body_size: usize) -> RouterType {
     Router::new()
         .route("/add", post(add_post))
-        .layer(DefaultBodyLimit::max(MAX_BODY_SIZE))
+        .layer(DefaultBodyLimit::max(max_body_size))
         .route("/get", get(get_posts))
         .route("/get_all", get(get_posts_all))
 }
@@ -25,10 +22,25 @@ async fn get_field_text(field: Field<'_>) -> Result<Option<String>, StatusCode> 
     }
 }
 
+fn create_redirection_with_params(destination: &str, params: &[(&str, &str)]) -> Result<Response, StatusCode> {
+    use std::borrow::Cow;
+    let mut destination = Cow::Borrowed(destination);
+    for (index, (key, value)) in params.into_iter()
+        .map(|(key, value)| (key, urlencoding::encode(&value)))
+        .enumerate() {
+        if index == 0 {
+            destination = Cow::Owned(format!("{}?{}={}", destination, key, value));
+        } else {
+            destination = Cow::Owned(format!("{}&{}={}", destination, key, value));
+        }
+    }
+    Ok(Redirect::to(&destination).into_response())
+}
+
 async fn add_post(
-    State(app_state): State<Arc<AppState>>,
+    State(app_state): State<AppStateType>,
     mut req: Multipart
-) -> Result<impl IntoResponse, StatusCode> {
+) -> Result<Response, StatusCode> {
     let mut user_name = None;
     let mut content = None;
     let mut user_avatar_url = None;
@@ -46,24 +58,34 @@ async fn add_post(
                     .save_file(field).await {
                     Ok(v) => Some(v),
                     Err(err) => {
-                        tracing::error!("Error saving image: {:?}", err);
-                        return Err(StatusCode::INTERNAL_SERVER_ERROR)
+                        use crate::services::file_handler_service::FileHandlerServiceError;
+                        return match err {
+                            FileHandlerServiceError::FileIsNotAnPNGImage => 
+                                create_redirection_with_params("/home", &[("error", "File is not an PNG image")]),
+                            FileHandlerServiceError::SqlxError(_) | FileHandlerServiceError::TokioIoError(_) => {
+                                tracing::error!("Error saving image: {:?}", err);
+                                create_redirection_with_params("/home", &[("error", "Internal server error")])
+                            }
+                        }
                     },
                 };
             },
             _ => (),
         }
     }
-    if let (Some(user_name), Some(content)) = (user_name, content) {
-        app_state.blog_post_service.add_post(user_name, content, user_avatar_url, post_image).await
-            .map_err(|err| {
-                tracing::error!("Error adding post: {:?}", err);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-        
-        return Ok(Redirect::to("/home").into_response());
+    match (user_name, content) {
+        (Some(user_name), Some(content)) => {
+            app_state.blog_post_service.add_post(user_name, content, user_avatar_url, post_image).await
+                .map_err(|err| {
+                    tracing::error!("Error adding post: {:?}", err);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+            Ok(Redirect::to("/home").into_response())
+        },
+        (None, None) => create_redirection_with_params("/home", &[("error", "User name and content cannot be empty (or contain only whit spaces)")]),
+        (None, _) => create_redirection_with_params("/home", &[("error", "User name cannot be empty (or contain only whit spaces)")]),
+        (_, None) => create_redirection_with_params("/home", &[("error", "Content cannot be empty (or contain only whit spaces)")]),
     }
-    Err(StatusCode::BAD_REQUEST)
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -72,7 +94,7 @@ struct GetPostsQuery {
     limit: Option<i64>,
 }
 
-async fn get_posts(State(app_state): State<Arc<AppState>>, Query(pagination): Query<GetPostsQuery>) -> Result<Json<GetPostsResponse>, StatusCode> {
+async fn get_posts(State(app_state): State<AppStateType>, Query(pagination): Query<GetPostsQuery>) -> Result<Json<GetPostsResponse>, StatusCode> {
     let posts = app_state.blog_post_service.get_posts(pagination.limit, pagination.offset).await
         .map_err(|err| {
             tracing::error!("Error getting posts: {:?}", err);
@@ -82,7 +104,7 @@ async fn get_posts(State(app_state): State<Arc<AppState>>, Query(pagination): Qu
 }
 
 async fn get_posts_all(
-    State(app_state): State<Arc<AppState>>
+    State(app_state): State<AppStateType>
 ) -> Result<Json<Vec<crate::db::blog_posts::Post>>, StatusCode> {
     let posts = app_state.blog_post_service.get_posts_all().await
         .map_err(|err| {
