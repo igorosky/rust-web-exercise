@@ -25,14 +25,21 @@ impl AppState {
     }
 
     #[inline]
-    pub(crate) async fn initialize(connection_pool: DatabasePool, uploads_directory: &str) -> Arc<Self> {
+    pub(crate) async fn initialize(connection_pool: DatabasePool) -> Result<Arc<Self>, std::env::VarError> {
+        use std::env::var;
         let ans = Arc::new(Self::new(
             BlogPostService::new(connection_pool.clone()),
-            FileHandlerService::new(connection_pool, uploads_directory).unwrap(),
-            StaticFilesService::new("static_files").unwrap(),
+            FileHandlerService::new(
+                connection_pool,
+                var("UPLOAD_DIRECTORY")?.as_str(),
+                var("UPLOAD_BUFFER_SIZE")?.parse().unwrap(),
+            ).unwrap(),
+            StaticFilesService::new(
+                var("STATIC_FILES_DIRECTORY")?.as_str()
+            ).unwrap(),
         ));
         let ptr = Arc::downgrade(&ans);
-        ans.blog_post_service.set_app_state(ptr.clone()).await;
-        ans
+        ans.blog_post_service.set_app_state(ptr).await;
+        Ok(ans)
     }
 }

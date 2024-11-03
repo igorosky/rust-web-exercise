@@ -29,9 +29,17 @@ impl BlogPostService {
             .map(|v| v.trim().to_string())
             .and_then(|v| if v.is_empty() { None } else { Some(v) });
         if let Some(user_avatar_url) = user_avatar_url.as_mut() {
-            let response = reqwest::get(user_avatar_url.as_str()).await.unwrap();
+            let response = reqwest::get(user_avatar_url.as_str()).await?;
             if !response.status().is_success() {
                 return Err(String::from("Failed to fetch user avatar").into());
+            }
+            let is_image= response.headers()
+                .get("Content-Type")
+                .and_then(|v| v.to_str().ok())
+                .map(|v| v.starts_with("image/"))
+                .unwrap_or(false);
+            if !is_image {
+                return Err(String::from("User avatar is not an image").into());
             }
             let user_avatar_tmp = self.app_state.lock().await.upgrade().unwrap()
                 .file_handler_service
@@ -39,6 +47,7 @@ impl BlogPostService {
             *user_avatar_url = user_avatar_tmp.get_name().unwrap().to_str().unwrap().to_string();
             user_avatar = Some(user_avatar_tmp);
         }
+
         if let Some(image) = post_image.as_mut() {
             image.save().await?;
         }

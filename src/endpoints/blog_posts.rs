@@ -1,13 +1,14 @@
 
 use std::sync::Arc;
 
-use axum::{extract::{Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
+use axum::{extract::{DefaultBodyLimit, Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
 use super::{models::get_posts_response::GetPostsResponse, AppState, RouterType};
 
 #[inline]
 pub(super) fn initialize() -> RouterType {
     Router::new()
         .route("/add", post(add_post))
+        .layer(DefaultBodyLimit::max(20 * 1024 * 1024))
         .route("/get", get(get_posts))
 }
 

@@ -4,16 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.37.0", features = ["rt-multi-thread", "signal", "full"] }
-tokio-util = { version = "0.7.12", features = ["io"] }
-futures = "0.3"
-axum = { version = "0.7.5", features = ["multipart"] }
-sqlx = { version = "0.8.0", features = ["sqlite", "runtime-tokio-native-tls", "time"] }
-serde = { version = "1.0.202", features = ["derive"] }
-tracing = "0.1.40"
+tokio = { version = "~1.37.0", features = ["rt-multi-thread", "signal", "full"] }
+tokio-util = { version = "~0.7.12", features = ["io"] }
+futures = "~0.3"
+axum = { version = "~0.7.5", features = ["multipart"] }
+sqlx = { version = "~0.8.0", features = ["sqlite", "runtime-tokio-native-tls", "time"] }
+serde = { version = "~1.0.202", features = ["derive"] }
+tracing = "~0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-dotenvy = "0.15.7"
-async-trait = "0.1.80"
+dotenvy = "~0.15.7"
+async-trait = "~0.1.80"
 reqwest = { version = "*", features = ["stream"] }
 uuid = { version = "*", features = ["v4", "fast-rng"] }
 sha2 = "*"

@@ -8,8 +8,13 @@ use super::{static_files, AppState, RouterType};
 pub(super) fn initialize() -> RouterType {
     Router::new()
         .route("/home", get(home))
+        .route("/favicon.ico", get(favicon))
 }
 
 async fn home(state: State<Arc<AppState>>) -> Result<impl IntoResponse, StatusCode> {
     static_files::get_static_file(state, Path("index.html".to_string())).await
+}
+
+async fn favicon(state: State<Arc<AppState>>) -> Result<impl IntoResponse, StatusCode> {
+    static_files::get_static_file(state, Path("favicon.ico".to_string())).await
 }

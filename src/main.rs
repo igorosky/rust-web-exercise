@@ -10,10 +10,9 @@ use app_state::AppState;
 
 use crate::db::initialize_db;
 
+#[inline]
+#[cfg(debug_assertions)]
 fn debug_mode_initialization() {
-    if !cfg!(debug_assertions) {
-        return;
-    }
     dotenvy::dotenv().ok();
 }
 
@@ -32,6 +31,7 @@ fn tracing_subscriber_init() {
 
 #[tokio::main]
 async fn main() {
+    #[cfg(debug_assertions)]
     debug_mode_initialization();
     tracing_subscriber_init();
     tracing::info!("Starting the application");
@@ -56,17 +56,20 @@ async fn main() {
 
 
     tracing::info!("Starting the server");
-    if let Err(err) = start_server(
-        AppState::initialize(
-            connection_pool.clone(),
-            match std::env::var("UPLOAD_DIRECTORY") {
-                Ok(dir) => dir,
-                Err(_) => {
-                    tracing::error!("Couldn't get access to UPLOAD_DIRECTORY environmental variable - maybe it is not set");
-                    return;
-                }
-            }.as_str()
-        ).await).await {
+    let app_state = match AppState::initialize(
+        connection_pool.clone(),
+    ).await {
+        Ok(app_state) => app_state,
+        Err(std::env::VarError::NotPresent) => {
+            tracing::error!("Error while initializing the application state: environment variable is not set");
+            return;
+        }
+        Err(std::env::VarError::NotUnicode(_)) => {
+            tracing::error!("Error while initializing the application state: environment variable is not a valid Unicode string");
+            return;
+        }
+    };
+    if let Err(err) = start_server(app_state).await {
         tracing::error!("Error while running server: {}", err);
         return;
     }

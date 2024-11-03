@@ -2,4 +2,5 @@
 .idea
 /target
 uploads
+.env
 *.sqlite3

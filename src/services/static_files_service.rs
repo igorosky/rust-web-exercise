@@ -10,7 +10,7 @@ pub(crate) struct StaticFilesService {
 
 impl StaticFilesService {
     pub(crate) fn new(static_files_directory: &str) -> Option<Self> {
-        let static_files_directory = PathBuf::from(static_files_directory);
+        let static_files_directory = PathBuf::from(static_files_directory).canonicalize().ok()?;
         match static_files_directory.is_dir() {
             true => Some(Self { static_files_directory }),
             false => None,
@@ -20,6 +20,15 @@ impl StaticFilesService {
     pub(crate) async fn get_static_file(&self, file_name: &str) -> Result<ReaderStream<File>, tokio::io::Error> {
         let mut path = self.static_files_directory.clone();
         path.push(file_name);
+
+        
+        // HTTP protocol should ensure that ".." will not take place however better safe than sorry
+        path = path.canonicalize()?;
+        if !path.starts_with(self.static_files_directory.clone()) {
+            return Err(tokio::io::Error::new(tokio::io::ErrorKind::PermissionDenied, "Path is not in allowed directory"));
+        }
+        
+        
         if !path.is_file() {
             return Err(tokio::io::Error::new(tokio::io::ErrorKind::NotFound, "File not found"));
         }

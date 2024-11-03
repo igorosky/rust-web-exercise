@@ -11,7 +11,7 @@ main>form {
     border: solid 2px black;
 }
 
-main>article {
+article {
     background-color: aqua;
     margin-top: 10px;
     border-radius: 15px;
@@ -20,16 +20,16 @@ main>article {
     border: solid 2px black;
 }
 
-main>article>div {
+article>div {
     padding: 5px;
 }
 
-main>article>div>header {
+article>div>header {
     display: flex;
     align-items: center;
 }
 
-main>article>div>header>img {
+article>div>header>img {
     margin-right: 5px;
     font-size: 0.8rem;
     color: darkslategrey;
@@ -39,12 +39,12 @@ main>article>div>header>img {
     border-radius: 15px;
 }
 
-main>article>div>header>div>i {
+article>div>header>div>i {
     font-size: 0.8rem;
     color: darkslategrey;
 }
 
-main>article>img {
+article>img {
     border-top: solid 2px black;
     border-radius: 15px;
 }

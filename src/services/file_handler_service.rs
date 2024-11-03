@@ -7,12 +7,11 @@ use tokio_util::io::{ReaderStream, StreamReader};
 
 use crate::db::{image::{get_image_by_hash, insert_image}, DatabasePool};
 
-const BUFFER_SIZE: usize = 1024;
-
 #[derive(Debug, Clone)]
 pub(crate) struct FileHandlerService {
     connection_pool: DatabasePool,
     folder_path: PathBuf,
+    buffer_size: usize,
 }
 
 #[derive(Debug)]
@@ -60,10 +59,10 @@ impl Drop for FileHandle {
 }
 
 impl FileHandlerService {
-    pub(crate) fn new(connection_pool: DatabasePool, folder_path: &str) -> Option<Self> {
+    pub(crate) fn new(connection_pool: DatabasePool, folder_path: &str, buffer_size: usize) -> Option<Self> {
         let folder_path = Path::new(folder_path).to_owned();
         match folder_path.is_dir() {
-            true => Some(Self { connection_pool, folder_path }),
+            true => Some(Self { connection_pool, folder_path, buffer_size }),
             false => None,
         }
     }
@@ -85,7 +84,7 @@ impl FileHandlerService {
         let mut file = File::create(file_path).await?;
         let reader = StreamReader::new(content.map_err(|err| tokio::io::Error::new(tokio::io::ErrorKind::Other, err)));
         let mut hasher = sha2::Sha256::new();
-        let mut buffer = [0; BUFFER_SIZE];
+        let mut buffer = vec![0; self.buffer_size];
         pin_mut!(reader);
         let mut read_bytes_count = reader.read(&mut buffer).await?;
         while read_bytes_count != 0 {

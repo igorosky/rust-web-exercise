@@ -27,8 +27,10 @@ pub(super) async fn start_server(app_state: Arc<AppState>) -> Result<(), Box<dyn
     Ok(())
 }
 
+#[cfg(debug_assertions)]
 const SHUTDOWN_CONFIRMATION_MESSAGE: &str = "Are you sure you want to shut down the server? Press Ctrl+C again to confirm";
 
+#[cfg(debug_assertions)]
 async fn shutdown_signal() {
     tokio::signal::ctrl_c().await.expect("Failed to listen for the signal");
     tracing::warn!("{}", SHUTDOWN_CONFIRMATION_MESSAGE);
@@ -40,6 +42,29 @@ async fn shutdown_signal() {
         last_clicked = second_click;
         tokio::signal::ctrl_c().await.expect("Failed to listen for the signal");
         second_click = tokio::time::Instant::now();
+    }
+    tracing::info!("Shutting down the server");
+}
+
+#[cfg(not(debug_assertions))]
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
     }
     tracing::info!("Shutting down the server");
 }
