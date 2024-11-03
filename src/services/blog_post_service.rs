@@ -36,10 +36,10 @@ impl BlogPostService {
             let is_image= response.headers()
                 .get("Content-Type")
                 .and_then(|v| v.to_str().ok())
-                .map(|v| v.starts_with("image/"))
+                .map(|v| v == "image/png")
                 .unwrap_or(false);
             if !is_image {
-                return Err(String::from("User avatar is not an image").into());
+                return Err(String::from("User avatar is not an png image").into());
             }
             let user_avatar_tmp = self.app_state.lock().await.upgrade().unwrap()
                 .file_handler_service
