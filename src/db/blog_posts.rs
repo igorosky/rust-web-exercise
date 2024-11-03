@@ -53,3 +53,16 @@ pub(crate) async fn get_total_amount_of_posts(pool: &DatabasePool) -> Result<i64
         .fetch_one(pool)
         .await
 }
+
+#[inline]
+pub(crate) async fn get_all_newest_posts(pool: &DatabasePool) -> Result<Vec<Post>, sqlx::Error> {
+    sqlx::query_as::<_, Post>(
+        "SELECT BlogPosts.id, user_name, content, user_avatar_table.image_filename AS user_avatar, post_image_table.image_filename AS post_image, publication_date
+        FROM BlogPosts
+        LEFT JOIN Images AS user_avatar_table ON BlogPosts.user_avatar = user_avatar_table.id
+        LEFT JOIN Images AS post_image_table ON BlogPosts.post_image = post_image_table.id
+        ORDER BY publication_date DESC",
+    )
+        .fetch_all(pool)
+        .await
+}

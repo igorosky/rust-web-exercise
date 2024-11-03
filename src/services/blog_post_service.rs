@@ -1,6 +1,6 @@
 use std::sync::Weak;
 use tokio::sync::Mutex;
-use crate::{app_state::AppState, db::{blog_posts::insert_post, DatabasePool}, endpoints::models::get_posts_response::GetPostsResponse};
+use crate::{app_state::AppState, db::{blog_posts, DatabasePool}, endpoints::models::get_posts_response::GetPostsResponse};
 use super::file_handler_service::FileHandle;
 
 pub(crate) struct BlogPostService {
@@ -33,14 +33,14 @@ impl BlogPostService {
             if !response.status().is_success() {
                 return Err(String::from("Failed to fetch user avatar").into());
             }
-            let is_image= response.headers()
-                .get("Content-Type")
-                .and_then(|v| v.to_str().ok())
-                .map(|v| v == "image/png")
-                .unwrap_or(false);
-            if !is_image {
-                return Err(String::from("User avatar is not an png image").into());
-            }
+            // let is_image= response.headers()
+            //     .get("Content-Type")
+            //     .and_then(|v| v.to_str().ok())
+            //     .map(|v| v == "image/png")
+            //     .unwrap_or(false);
+            // if !is_image {
+            //     return Err(String::from("User avatar is not an png image").into());
+            // }
             let user_avatar_tmp = self.app_state.lock().await.upgrade().unwrap()
                 .file_handler_service
                 .save_file(response.bytes_stream()).await?;
@@ -54,7 +54,7 @@ impl BlogPostService {
         if let Some(image) = user_avatar.as_mut() {
             image.save().await?;
         }
-        insert_post(
+        blog_posts::insert_post(
             &self.connection_pool,
             &user_name,
             &content,
@@ -72,7 +72,6 @@ impl BlogPostService {
     pub(crate) async fn get_posts(&self, limit: Option<i64>, offset: Option<i64>) -> Result<GetPostsResponse, sqlx::Error> {
     let limit = limit.map(|v| v.clamp(1, 100)).unwrap_or(10);
         let offset = offset.map(|v| v.max(0)).unwrap_or(0);
-        use crate::db::blog_posts;
         Ok(
             GetPostsResponse {
                 limit,
@@ -85,6 +84,10 @@ impl BlogPostService {
                 ).await?,
             }
         )
-        
+    }
+    
+    #[inline]
+    pub(crate) async fn get_posts_all(&self) -> Result<Vec<blog_posts::Post>, sqlx::Error> {
+        blog_posts::get_all_newest_posts(&self.connection_pool).await
     }
 }

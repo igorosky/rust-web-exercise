@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 
+use super::file_handler_service::get_file_from_directory;
+
 
 pub(crate) struct StaticFilesService {
     static_files_directory: PathBuf,
@@ -17,22 +19,8 @@ impl StaticFilesService {
         }
     }
 
+    #[inline]
     pub(crate) async fn get_static_file(&self, file_name: &str) -> Result<ReaderStream<File>, tokio::io::Error> {
-        let mut path = self.static_files_directory.clone();
-        path.push(file_name);
-
-        
-        // HTTP protocol should ensure that ".." will not take place however better safe than sorry
-        path = path.canonicalize()?;
-        if !path.starts_with(self.static_files_directory.clone()) {
-            return Err(tokio::io::Error::new(tokio::io::ErrorKind::PermissionDenied, "Path is not in allowed directory"));
-        }
-        
-        
-        if !path.is_file() {
-            return Err(tokio::io::Error::new(tokio::io::ErrorKind::NotFound, "File not found"));
-        }
-        let file = File::open(path).await?;
-        Ok(ReaderStream::new(file))
+        get_file_from_directory(self.static_files_directory.clone(), file_name).await
     }
 }

@@ -7,6 +7,25 @@ use tokio_util::io::{ReaderStream, StreamReader};
 
 use crate::db::{image::{get_image_by_hash, insert_image}, DatabasePool};
 
+const PNG_HEADER: [u8; 8] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+// It is expected that folder_path is canonicalized
+pub(super) async fn get_file_from_directory(folder_path: PathBuf, filename: &str) -> Result<ReaderStream<File>, tokio::io::Error> {
+    let mut path = folder_path.clone();
+    path.push(filename);
+
+    // HTTP protocol should ensure that ".." will not take place however better safe than sorry
+    path = path.canonicalize()?;
+    if !path.starts_with(folder_path) {
+        return Err(tokio::io::Error::new(tokio::io::ErrorKind::PermissionDenied, "Path is not in allowed directory"));
+    }
+    
+    if !path.is_file() {
+        return Err(tokio::io::Error::new(tokio::io::ErrorKind::NotFound, "File not found"));
+    }
+    Ok(ReaderStream::new(File::open(path).await?))
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct FileHandlerService {
     connection_pool: DatabasePool,
@@ -62,7 +81,7 @@ impl FileHandlerService {
     pub(crate) fn new(connection_pool: DatabasePool, folder_path: &str, buffer_size: usize) -> Option<Self> {
         let folder_path = Path::new(folder_path).to_owned();
         match folder_path.is_dir() {
-            true => Some(Self { connection_pool, folder_path, buffer_size }),
+            true => Some(Self { connection_pool, folder_path: folder_path.canonicalize().ok()?, buffer_size }),
             false => None,
         }
     }
@@ -86,7 +105,10 @@ impl FileHandlerService {
         let mut hasher = sha2::Sha256::new();
         let mut buffer = vec![0; self.buffer_size];
         pin_mut!(reader);
-        let mut read_bytes_count = reader.read(&mut buffer).await?;
+        let mut read_bytes_count = reader.read_exact(&mut buffer[..PNG_HEADER.len()]).await?;
+        if read_bytes_count < PNG_HEADER.len() || buffer[..8] != PNG_HEADER {
+            return Err("Invalid file format".into());
+        }
         while read_bytes_count != 0 {
             hasher.update(&buffer[..read_bytes_count]);
             file.write_all(&buffer[..read_bytes_count]).await?;
@@ -111,12 +133,8 @@ impl FileHandlerService {
         Ok(file_handle)
     }
     
+    #[inline]
     pub(crate) async fn get_file(&self, filename: &str) -> Result<ReaderStream<File>, tokio::io::Error> {
-        let mut file_path = self.folder_path.clone();
-        file_path.push(filename);
-        if !file_path.is_file() {
-            return Err(tokio::io::Error::new(tokio::io::ErrorKind::NotFound, "File not found"));
-        }
-        Ok(ReaderStream::new(File::open(file_path).await?))
+        get_file_from_directory(self.folder_path.clone(), filename).await
     }
 }

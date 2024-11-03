@@ -1,30 +1,43 @@
 
 use std::sync::Arc;
 
-use axum::{extract::{DefaultBodyLimit, Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
+use axum::{extract::{multipart::Field, DefaultBodyLimit, Multipart, Query, State}, http::StatusCode, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router};
 use super::{models::get_posts_response::GetPostsResponse, AppState, RouterType};
+
+const MAX_BODY_SIZE: usize = 20 * 1024 * 1024;
 
 #[inline]
 pub(super) fn initialize() -> RouterType {
     Router::new()
         .route("/add", post(add_post))
-        .layer(DefaultBodyLimit::max(20 * 1024 * 1024))
+        .layer(DefaultBodyLimit::max(MAX_BODY_SIZE))
         .route("/get", get(get_posts))
+        .route("/get_all", get(get_posts_all))
 }
 
-async fn add_post(State(app_state): State<Arc<AppState>>, mut req: Multipart) -> Result<impl IntoResponse, StatusCode> {
+async fn get_field_text(field: Field<'_>) -> Result<Option<String>, StatusCode> {
+    let text = field.text().await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let text = text.trim().to_string();
+    match text.is_empty() {
+        true => Ok(None),
+        false => Ok(Some(text)),
+    }
+}
+
+async fn add_post(
+    State(app_state): State<Arc<AppState>>,
+    mut req: Multipart
+) -> Result<impl IntoResponse, StatusCode> {
     let mut user_name = None;
     let mut content = None;
     let mut user_avatar_url = None;
     let mut post_image = None;
     while let Ok(Some(field)) = req.next_field().await {
         match field.name() {
-            Some("user_name") => user_name = Some(field.text().await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?),
-            Some("content") => content = Some(field.text().await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?),
-            Some("user_avatar_url") => user_avatar_url = Some(field.text().await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?),
+            Some("user_name") => user_name = get_field_text(field).await?,
+            Some("content") => content = get_field_text(field).await?,
+            Some("user_avatar_url") => user_avatar_url = get_field_text(field).await?,
             Some("post_image") => {
                 if let Some("") = field.file_name() {
                     continue;
@@ -61,6 +74,17 @@ struct GetPostsQuery {
 
 async fn get_posts(State(app_state): State<Arc<AppState>>, Query(pagination): Query<GetPostsQuery>) -> Result<Json<GetPostsResponse>, StatusCode> {
     let posts = app_state.blog_post_service.get_posts(pagination.limit, pagination.offset).await
+        .map_err(|err| {
+            tracing::error!("Error getting posts: {:?}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    Ok(Json(posts))
+}
+
+async fn get_posts_all(
+    State(app_state): State<Arc<AppState>>
+) -> Result<Json<Vec<crate::db::blog_posts::Post>>, StatusCode> {
+    let posts = app_state.blog_post_service.get_posts_all().await
         .map_err(|err| {
             tracing::error!("Error getting posts: {:?}", err);
             StatusCode::INTERNAL_SERVER_ERROR
