@@ -3,7 +3,7 @@
 ## Build
 In order to build simply use docker (or podman) buildx. Assuming you are in the root directory of the project use for example:
 ```bash
-    docker buildx build -t igor-zaworski-posts .
+docker buildx build -t igor-zaworski-posts .
 ```
 
 > Note change `docker` to `podman` if you are using podman
@@ -11,7 +11,7 @@ In order to build simply use docker (or podman) buildx. Assuming you are in the 
 ## Run
 To run the application in the simplest form simply use:
 ```bash
-    docker run -p 3000:3000 igor-zaworski-posts
+docker run -p 3000:3000 igor-zaworski-posts
 ```
 
 > Note change `docker` to `podman` if you are using podman

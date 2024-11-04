@@ -27,7 +27,7 @@ pub(crate) struct Post {
     pub content: String,
     pub user_avatar: Option<String>,
     pub post_image: Option<String>,
-    pub publication_date: String,
+    pub publication_date: chrono::DateTime<chrono::Utc>,
 }
 
 #[inline]

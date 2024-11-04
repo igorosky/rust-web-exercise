@@ -47,14 +47,17 @@ impl BlogPostService {
             if !response.status().is_success() {
                 return Err(AddingBlogPostError::FailedToFetchUserAvatar);
             }
-            let is_image= response.headers()
-                .get("Content-Type")
-                .and_then(|v| v.to_str().ok())
-                .map(|v| v == "image/png")
-                .unwrap_or(false);
-            if !is_image {
-                return Err(AddingBlogPostError::UserAvatarIsNotAnPNGImage);
-            }
+
+            // Some images does not have Content-Type header or even though they are PNG images, they are not marked as such
+            // let is_image= response.headers()
+            //     .get("Content-Type")
+            //     .and_then(|v| v.to_str().ok())
+            //     .map(|v| v == "image/png")
+            //     .unwrap_or(false);
+            // if !is_image {
+            //     return Err(AddingBlogPostError::UserAvatarIsNotAnPNGImage);
+            // }
+            
             let user_avatar_tmp = self.app_state.lock().await.upgrade()
                 .expect("Service do not have a valid reference to app state")
                 .file_handler_service

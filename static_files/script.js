@@ -13,12 +13,15 @@ function display_posts(posts) {
         const article = document.createElement('article');
         const user_avatar = post.user_avatar !== null ? `<img src="image/${post.user_avatar}" alt="User avatar image">` : '';
         const post_image = post.post_image !== null ? `<img src="image/${post.post_image}" alt="Posted image">` : '';
+        const date = new Date(post.publication_date);
+        const date_locale = date.toLocaleDateString();
+        const time_locale = date.toLocaleTimeString();
         article.innerHTML = `
             <div>
                 <header>
                     ${user_avatar}
                     <div>
-                        <b>${post.user_name}</b> <i>date: ${post.publication_date}</i>
+                        <b>${post.user_name}</b> <i>date: ${date_locale} ${time_locale}</i>
                     </div>
                 </header>
                 <p>

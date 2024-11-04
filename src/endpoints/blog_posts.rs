@@ -25,8 +25,8 @@ async fn get_field_text(field: Field<'_>) -> Result<Option<String>, StatusCode> 
 fn create_redirection_with_params(destination: &str, params: &[(&str, &str)]) -> Result<Response, StatusCode> {
     use std::borrow::Cow;
     let mut destination = Cow::Borrowed(destination);
-    for (index, (key, value)) in params.into_iter()
-        .map(|(key, value)| (key, urlencoding::encode(&value)))
+    for (index, (key, value)) in params.iter()
+        .map(|(key, value)| (key, urlencoding::encode(value)))
         .enumerate() {
         if index == 0 {
             destination = Cow::Owned(format!("{}?{}={}", destination, key, value));
@@ -75,12 +75,15 @@ async fn add_post(
     }
     match (user_name, content) {
         (Some(user_name), Some(content)) => {
-            app_state.blog_post_service.add_post(user_name, content, user_avatar_url, post_image).await
-                .map_err(|err| {
+            match app_state.blog_post_service.add_post(user_name, content, user_avatar_url, post_image).await {
+                Ok(_) => Ok(Redirect::to("/home").into_response()),
+                Err(err) => {
                     tracing::error!("Error adding post: {:?}", err);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
-            Ok(Redirect::to("/home").into_response())
+                    create_redirection_with_params(
+                        "/home",
+                        &[("error", "User avatar url does not lead to a PNG")])
+                },
+            }
         },
         (None, None) => create_redirection_with_params("/home", &[("error", "User name and content cannot be empty (or contain only whit spaces)")]),
         (None, _) => create_redirection_with_params("/home", &[("error", "User name cannot be empty (or contain only whit spaces)")]),
