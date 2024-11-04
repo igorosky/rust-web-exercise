@@ -24,6 +24,6 @@ Application will be available at [`http://localhost:3000/home`](http://localhost
  - `DATABASE_URL` - path to sqlite3 database file
  - `UPLOAD_DIRECTORY` - path to directory to which images will be saved
  - `STATIC_FILES_DIRECTORY` - path to directory where static files are located (recommended not to change)
- - `UPLOAD_BUFFER_SIZE` - size of a buffer for image saving
- - `MAX_BODY_SIZE` - Maximum size of a request body
- - `ADDRESS` - address on which the server will listen
+ - `UPLOAD_BUFFER_SIZE` - size of a buffer for image saving in bytes (has to be at least 8 bytes if less 8 will be used)
+ - `MAX_BODY_SIZE` - Maximum size of a request body in bytes
+ - `ADDRESS` - address on which the server will listen (default: `0.0.0.0:3000`)

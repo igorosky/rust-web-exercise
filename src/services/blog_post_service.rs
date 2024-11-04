@@ -20,6 +20,8 @@ pub(crate) enum AddingBlogPostError {
     FailedToFetchUserAvatar,
     #[error("Tokio IO error: {0}")]
     TokioIoError(#[from] tokio::io::Error),
+    #[error("User avatar is too big")]
+    UserAvatarIsTooBig,
 }
 
 impl BlogPostService {
@@ -67,6 +69,7 @@ impl BlogPostService {
                         FileHandlerServiceError::TokioIoError(err) => err.into(),
                         FileHandlerServiceError::SqlxError(err) => err.into(),
                         FileHandlerServiceError::FileIsNotAnPNGImage => AddingBlogPostError::UserAvatarIsNotAnPNGImage,
+                        FileHandlerServiceError::FileIsTooBig => AddingBlogPostError::UserAvatarIsTooBig,
                     }
                 })?;
             *user_avatar_url = user_avatar_tmp.get_name()

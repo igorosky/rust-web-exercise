@@ -98,6 +98,7 @@ pub(crate) struct FileHandlerService {
     connection_pool: DatabasePool,
     folder_path: PathBuf,
     buffer_size: usize,
+    max_file_size: usize,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -108,13 +109,20 @@ pub(crate) enum FileHandlerServiceError {
     FileIsNotAnPNGImage,
     #[error("Failed to access database: {0}")]
     SqlxError(#[from] sqlx::error::Error),
+    #[error("File is too big")]
+    FileIsTooBig,
 }
 
 impl FileHandlerService {
-    pub(crate) fn new(connection_pool: DatabasePool, folder_path: &str, buffer_size: usize) -> Option<Self> {
+    pub(crate) fn new(connection_pool: DatabasePool, folder_path: &str, buffer_size: usize, max_file_size: usize) -> Option<Self> {
         let folder_path = Path::new(folder_path).to_owned();
         match folder_path.is_dir() {
-            true => Some(Self { connection_pool, folder_path: folder_path.canonicalize().ok()?, buffer_size }),
+            true => Some(Self {
+                connection_pool,
+                folder_path: folder_path.canonicalize().ok()?,
+                buffer_size: buffer_size.max(PNG_HEADER.len()),
+                max_file_size,
+            }),
             false => None,
         }
     }
@@ -147,7 +155,12 @@ impl FileHandlerService {
         if read_bytes_count < PNG_HEADER.len() || buffer[..8] != PNG_HEADER {
             return Err(FileHandlerServiceError::FileIsNotAnPNGImage);
         }
+        let mut total_file_size = 0;
         while read_bytes_count != 0 {
+            total_file_size += read_bytes_count;
+            if total_file_size > self.max_file_size {
+                return Err(FileHandlerServiceError::FileIsTooBig);
+            }
             hasher.update(&buffer[..read_bytes_count]);
             file.write_all(&buffer[..read_bytes_count]).await?;
             read_bytes_count = reader.read(&mut buffer).await?;

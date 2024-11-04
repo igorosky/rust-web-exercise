@@ -66,6 +66,8 @@ async fn add_post(
                                 tracing::error!("Error saving image: {:?}", err);
                                 create_redirection_with_params("/home", &[("error", "Internal server error")])
                             }
+                            FileHandlerServiceError::FileIsTooBig => 
+                                create_redirection_with_params("/home", &[("error", "File is too big")])
                         }
                     },
                 };

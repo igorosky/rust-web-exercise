@@ -7,7 +7,7 @@ authors = ["Igor Zaworski"]
 [dependencies]
 tokio = { version = "~1.41.0", features = ["rt-multi-thread", "signal", "fs"] }
 tokio-util = { version = "~0.7.12", features = ["io"] }
-futures = "~0.3"
+futures = "~0.3.31"
 axum = { version = "~0.7.5", features = ["multipart"] }
 sqlx = { version = "~0.8.0", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }
 serde = { version = "~1.0.202", features = ["derive"] }

@@ -43,6 +43,8 @@ impl AppState {
                 var(env_variables::UPLOAD_DIRECTORY)?.as_str(),
                 var(env_variables::UPLOAD_BUFFER_SIZE)?
                     .parse().map_err(|_| AppStateInitializationError::NotValidNumber)?,
+                var(env_variables::MAX_BODY_SIZE)?
+                    .parse().map_err(|_| AppStateInitializationError::NotValidNumber)?,
             ).ok_or(AppStateInitializationError::InvalidPathError)?,
             StaticFilesService::new(
                 var(env_variables::STATIC_FILES_DIRECTORY)?.as_str()
