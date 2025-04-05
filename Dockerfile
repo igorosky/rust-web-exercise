@@ -1,4 +1,4 @@
-FROM rust:1.82.0
+FROM rust:1.86.0
 
 WORKDIR /usr/app
 
@@ -22,4 +22,4 @@ RUN rm -rf src
 
 EXPOSE 3000
 
-CMD ["jet-brains-internships-rust-web"]
+CMD ["rust-web-exercise"]

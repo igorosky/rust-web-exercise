@@ -1,5 +1,5 @@
 [package]
-name = "jet-brains-internships-rust-web"
+name = "rust-web-exercise"
 version = "0.1.0"
 edition = "2021"
 authors = ["Igor Zaworski"]

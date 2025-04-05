@@ -1,9 +1,9 @@
-# Igor Zaworski - JetBrains internship recruitment exercise
+# Rust web exercise
 
 ## Build
 In order to build simply use docker (or podman) buildx. Assuming you are in the root directory of the project use for example:
 ```bash
-docker buildx build -t igor-zaworski-posts .
+docker buildx build -t rust-web-exercise .
 ```
 
 > Note change `docker` to `podman` if you are using podman
@@ -11,7 +11,7 @@ docker buildx build -t igor-zaworski-posts .
 ## Run
 To run the application in the simplest form simply use:
 ```bash
-docker run -p 3000:3000 igor-zaworski-posts
+docker run -p 3000:3000 rust-web-exercise
 ```
 
 > Note change `docker` to `podman` if you are using podman
